@@ -75,6 +75,8 @@ for gp in (kts, groovy):
         t = gp.read_text(encoding="utf-8")
         t = re.sub(r"compileSdk\s*=\s*flutter\.compileSdkVersion", "compileSdk = 36", t)
         t = re.sub(r"compileSdkVersion\s+flutter\.compileSdkVersion", "compileSdkVersion 36", t)
+        t = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 23", t)
+        t = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 23", t)
         gp.write_text(t, encoding="utf-8")
 
 # ---------- settings.gradle(.kts): Kotlin поновее (нужно сканеру) ----------
