@@ -1,0 +1,56 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: stable
+          cache: true
+
+      - name: Generate Android project
+        run: flutter create --org com.winter --project-name winter_expiry --platforms android .
+
+      - name: Patch Android project
+        run: python3 ci/patch_android.py
+
+      - name: Use fixed signing key (so updates install over the old version)
+        run: |
+          mkdir -p ~/.android
+          cp ci/debug.keystore ~/.android/debug.keystore
+
+      - run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+
+      - run: cp build/app/outputs/flutter-apk/app-release.apk winter-expiry.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winter-expiry-apk
+          path: winter-expiry.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Просрочка 1.0.${{ github.run_number }}
+          files: winter-expiry.apk
+          make_latest: true

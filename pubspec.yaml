@@ -1,0 +1,21 @@
+name: winter_expiry
+description: "Учёт просрочки для кассира: вода, пиво, энергетики."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  mobile_scanner: ^6.0.0
+  flutter_local_notifications: ^18.0.0
+  timezone: any
+  shared_preferences: ^2.3.0
+  http: ^1.2.0
+
+flutter:
+  uses-material-design: true
