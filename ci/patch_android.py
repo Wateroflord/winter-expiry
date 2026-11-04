@@ -89,4 +89,23 @@ for name in ("settings.gradle.kts", "settings.gradle"):
         )
         s_path.write_text(s, encoding="utf-8")
 
+# ---------- AGP 8.7.3 + Gradle 8.10.2 (нужно камере CameraX) ----------
+for name in ("settings.gradle.kts", "settings.gradle"):
+    s_path = root / name
+    if s_path.exists():
+        s = s_path.read_text(encoding="utf-8")
+        s = re.sub(
+            r'(id\s*\(?\s*["\']com\.android\.application["\']\s*\)?\s*version\s*)["\'][0-9.]+["\']',
+            r'\g<1>"8.7.3"',
+            s,
+        )
+        s_path.write_text(s, encoding="utf-8")
+wrapper = root / "gradle/wrapper/gradle-wrapper.properties"
+if wrapper.exists():
+    w = wrapper.read_text(encoding="utf-8")
+    w = re.sub(r"gradle-[0-9.]+-(all|bin)\.zip", "gradle-8.10.2-all.zip", w)
+    wrapper.write_text(w, encoding="utf-8")
+else:
+    fail("gradle-wrapper.properties not found")
+
 print("Android project patched OK")
