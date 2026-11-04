@@ -69,6 +69,14 @@ elif groovy.exists():
 else:
     fail("app build.gradle not found")
 
+# ---------- compileSdk 36 (нужно сканеру) ----------
+for gp in (kts, groovy):
+    if gp.exists():
+        t = gp.read_text(encoding="utf-8")
+        t = re.sub(r"compileSdk\s*=\s*flutter\.compileSdkVersion", "compileSdk = 36", t)
+        t = re.sub(r"compileSdkVersion\s+flutter\.compileSdkVersion", "compileSdkVersion 36", t)
+        gp.write_text(t, encoding="utf-8")
+
 # ---------- settings.gradle(.kts): Kotlin поновее (нужно сканеру) ----------
 for name in ("settings.gradle.kts", "settings.gradle"):
     s_path = root / name
@@ -76,7 +84,7 @@ for name in ("settings.gradle.kts", "settings.gradle"):
         s = s_path.read_text(encoding="utf-8")
         s = re.sub(
             r'(id\s*\(?\s*["\']org\.jetbrains\.kotlin\.android["\']\s*\)?\s*version\s*)["\'](1\.[0-8][0-9.]*)["\']',
-            r'\g<1>"1.9.24"',
+            r'\g<1>"2.1.0"',
             s,
         )
         s_path.write_text(s, encoding="utf-8")
