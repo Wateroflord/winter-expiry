@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models.dart';
 import '../notifications.dart';
@@ -58,6 +64,43 @@ class _HomeScreenState extends State<HomeScreen>
       ));
   }
 
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _exportBackup() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final d = DateTime.now();
+      final name = 'prosrochka-${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}.json';
+      final f = File('${dir.path}/$name');
+      await f.writeAsString(_store.exportBackup());
+      await Share.shareXFiles([XFile(f.path, mimeType: 'application/json')],
+          subject: 'Просрочка — резервная копия');
+    } catch (e) {
+      _snack('Не удалось сохранить копию: $e');
+    }
+  }
+
+  Future<void> _importBackup() async {
+    try {
+      final r = await FilePicker.platform.pickFiles(type: FileType.any, withData: true);
+      final file = r?.files.single;
+      if (file == null) return;
+      final bytes = file.bytes ?? (file.path == null ? null : await File(file.path!).readAsBytes());
+      if (bytes == null) return;
+      final n = await _store.importBackup(utf8.decode(bytes, allowMalformed: true));
+      _snack('Восстановлено товаров: $n');
+    } on FormatException catch (e) {
+      _snack(e.message);
+    } catch (e) {
+      _snack('Не удалось восстановить: $e');
+    }
+  }
+
   void _openSettings() {
     var warn = _store.warnDays;
     showModalBottomSheet<void>(
@@ -104,6 +147,23 @@ class _HomeScreenState extends State<HomeScreen>
                 leading: const Icon(Icons.notifications_active_outlined),
                 title: const Text('Проверить уведомление'),
                 onTap: () => Notifier.showTest(),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.upload_file),
+                title: const Text('Сохранить резервную копию'),
+                subtitle: const Text('Файл можно отправить себе в Telegram или на Google Диск'),
+                onTap: _exportBackup,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.restore),
+                title: const Text('Восстановить из копии'),
+                onTap: () async {
+                  await _importBackup();
+                  if (ctx.mounted) setSheet(() => warn = _store.warnDays);
+                },
               ),
             ],
           ),

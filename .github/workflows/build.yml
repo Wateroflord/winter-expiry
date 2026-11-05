@@ -2,7 +2,9 @@ name: Build APK
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
   workflow_dispatch:
 
 permissions:
@@ -13,6 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Shared CI tools (winter-hub/ci)
+        uses: actions/checkout@v4
+        with:
+          repository: Wateroflord/winter-hub
+          path: .winter
+          sparse-checkout: /ci/
+          sparse-checkout-cone-mode: false
 
       - uses: actions/setup-java@v4
         with:
@@ -26,20 +35,39 @@ jobs:
           cache: true
 
       - name: Generate Android project
-        run: flutter create --org com.winter --project-name winter_expiry --platforms android .
+        run: |
+          flutter create --org com.winter --project-name winter_expiry --platforms android .
+          rm -f test/widget_test.dart
 
       - name: Patch Android project
         run: python3 ci/patch_android.py
 
-      - name: Use fixed signing key (so updates install over the old version)
-        run: |
-          mkdir -p ~/.android
-          cp ci/debug.keystore ~/.android/debug.keystore
+      - run: |
+          flutter pub get
+          dart run flutter_launcher_icons || true
 
-      - run: flutter pub get
+      - name: Analyze
+        run: |
+          rc=0
+          flutter analyze --no-fatal-infos --no-fatal-warnings > analyze.txt 2>&1 || rc=$?
+          cat analyze.txt
+          python3 .winter/ci/annotate.py analyze.txt "analyze"
+          exit $rc
+
+      - name: Tests
+        run: |
+          set -o pipefail
+          flutter test test 2>&1 | tee test.txt || { python3 .winter/ci/annotate.py test.txt "tests"; exit 1; }
 
       - name: Build APK
-        run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+        run: |
+          set -o pipefail
+          flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }} 2>&1 | tee build.txt || { python3 .winter/ci/annotate.py build.txt "build"; exit 1; }
+
+      - name: Sign APK
+        env:
+          WINTER_SIGNING: ${{ secrets.WINTER_SIGNING }}
+        run: python3 .winter/ci/sign_apk.py build/app/outputs/flutter-apk/app-release.apk
 
       - run: cp build/app/outputs/flutter-apk/app-release.apk winter-expiry.apk
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'backup.dart';
 import 'models.dart';
 import 'notifications.dart';
 
@@ -122,6 +123,30 @@ class AppStore extends ChangeNotifier {
   Future<void> clearHistory() async {
     items.removeWhere((i) => i.removed);
     await _persist();
+  }
+
+  /// Всё содержимое приложения одним JSON (для резервной копии).
+  String exportBackup() => Backup(
+        items: items,
+        products: products,
+        warnDays: warnDays,
+        notifyHour: notifyHour,
+        notifyMinute: notifyMinute,
+      ).encode();
+
+  /// Восстановить из копии. Возвращает число товаров в копии.
+  Future<int> importBackup(String raw) async {
+    final b = Backup.parse(raw);
+    final merged = Backup.merge(items, b.items);
+    items
+      ..clear()
+      ..addAll(merged);
+    products.addAll(b.products);
+    warnDays = b.warnDays;
+    notifyHour = b.notifyHour;
+    notifyMinute = b.notifyMinute;
+    await _persist();
+    return b.items.length;
   }
 
   Future<void> updateSettings({int? warn, int? hour, int? minute}) async {
