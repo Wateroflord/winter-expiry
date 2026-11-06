@@ -6,7 +6,7 @@ import 'screens/home_screen.dart';
 import 'storage.dart';
 import 'package:winter_core/winter_core.dart';
 
-void main() => runWinterApp(repo: 'winter-expiry', appName: 'Просрочка', body: _main);
+Future<void> main() => runWinterApp(repo: 'winter-expiry', appName: 'Просрочка', body: _main);
 
 Future<void> _main() async {
   WidgetsFlutterBinding.ensureInitialized();
